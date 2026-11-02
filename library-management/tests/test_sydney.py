@@ -20,10 +20,15 @@ Deleting a member
 
 Checking out a book
 	Testing procedure:
+		Check if loan is created
+		Check if book available copies decrements
 
 '''
 import pytest
 
+'''
+Function: Creating a member
+'''
 
 def test_create_member_returns_created_member(client):
 	payload = {
@@ -52,11 +57,24 @@ def test_create_member_with_empty_name_returns_error(client):
 	assert response.status_code == 400
 	assert response.get_json() == {"error": "Name is required"}
 
-#def test_create_member_with_empty_email_returns_error(client):
+
+def test_create_member_with_empty_email_returns_error(client):
+	payload = {
+		"name": "Alice",
+		"email": ""
+	}
+
+	response = client.post("/members", json=payload)
+
+	assert response.status_code == 400
+	assert response.get_json() == {"error": "Email is required"}
 
 #def test_create_member_with_invalid_email_returns_error(client):
 
 
+'''
+Function: Deleting a member
+'''
 
 def test_delete_member_returns_empty(client):
 	payload = {
@@ -72,8 +90,15 @@ def test_delete_member_returns_empty(client):
 	assert response.get_data(as_text=True) == ""
 
 
-#def test_delete_nonexistent_member_returns_error(client):
+def test_delete_nonexistent_member_returns_error(client):
+	response = client.delete("/members/999")
 
+	assert response.status_code == 404
+	assert response.get_json() == {"error": "Member not found"}
+
+'''
+Function: Checking out a book
+'''
 
 def test_checkout_book_creates_loan(client):
 	member_response = client.post(
@@ -83,6 +108,7 @@ def test_checkout_book_creates_loan(client):
 			"email": "alice3@gmail.com"
 		}
 	)
+
 	book_response = client.post(
 		"/books",
 		json={
