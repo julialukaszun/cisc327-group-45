@@ -41,12 +41,12 @@ app working without a REST client, and calls the same in-memory store.
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/books` | List all books |
+| GET | `/books` | List all books (searches by book id, ISBN, title and author)|
 | POST | `/books` | Create a book |
 | GET | `/books/<id>` | Get one book |
 | PUT | `/books/<id>` | Update a book |
 | DELETE | `/books/<id>` | Delete a book |
-| GET | `/members` | List all members |
+| GET | `/members` | List all members (searches by member id, member name and member email) |
 | POST | `/members` | Create a member |
 | GET | `/members/<id>` | Get one member |
 | PUT | `/members/<id>` | Update a member |

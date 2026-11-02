@@ -6,13 +6,22 @@ from app.models.book import Book
 
 books_bp = Blueprint("books", __name__, url_prefix="/books")
 
-
+# improved functionalitiy: added the ability to search by Book ID and ISBN
 @books_bp.route("", methods=["GET"])
 def list_books():
     results = list(store.books.values())
-    search = request.args.get("search", "").lower()
+
+    search = request.args.get("search", "").strip().lower()
     if search:
-        results = [b for b in results if search in b.title.lower() or search in b.author.lower()]
+        search_isbn = search.replace("-", "").replace(" ", "")
+        results = [
+            b for b in results
+            if (search.isdecimal() and b.id == int(search))
+            or (search_isbn and b.isbn.replace("-", "").lower() == search_isbn)
+            or search in b.title.lower()
+            or search in b.author.lower()
+        ]
+
     return jsonify([b.to_dict() for b in results])
 
 

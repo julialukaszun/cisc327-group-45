@@ -102,8 +102,68 @@ def test_create_book_with_default_copies(client):
     assert response.status_code == 201
     assert response.json["total_copies"] == 1
     assert response.json["available_copies"] == 1
+
+# tests for searching for books
+
+def test_search_books_by_title(client):
+    payload_1 = {"title": "Clean Code",
+                        "author": "Robert C. Martin",
+                        "isbn": "978-0132350884",
+                        "total_copies": 2,}
+    client.post("/books", json=payload_1)
     
+    payload_2 = {"title": "Scrabbled Code",
+                        "author": "Hubert C. Martin",
+                        "isbn": "978-0132350888",
+                        "total_copies": 1,}
+    client.post("/books", json=payload_2)
+        
+
+    response = client.get("/books?search=Scrabbled Code")
+
+    assert response.status_code == 200 
+    assert len(response.get_json()) == 1
+    assert response.get_json()[0]["title"] == "Scrabbled Code"
+
+
+def test_search_books_by_isbn(client):
+    payload = {"title": "Clean Code",
+                        "author": "Robert C. Martin",
+                        "isbn": "978-0132350884",
+                        "total_copies": 2,}
+    client.post("/books", json=payload)
+
+    response = client.get("/books?search=978-0132350884")
+
+    assert response.status_code == 200
+    assert len(response.get_json()) == 1
+    assert response.get_json()[0]["title"] == "Clean Code"
+
+# tests for searching for members
+
+def test_search_members_by_name(client):
+    payload_1 = {"name": "Jane Doe", "email": "jane@example.com"}
+    client.post("/members", json=payload_1)
+    payload_2 = {"name": "Bob Doe", "email": "bob@example.com"}
+    client.post("/members", json=payload_2)
+
+    response = client.get("/members?search=jane")
+
+    assert response.status_code == 200
+    assert len(response.get_json()) == 1
+    assert response.get_json()[0]["name"] == "Jane Doe"
     
+def test_search_members_by_email(client):
+    payload_1 = {"name": "Jane Doe", "email": "jane@example.com"}
+    client.post("/members", json=payload_1)
+    payload_2 = {"name": "Bob Doe", "email": "bob@example.com"}
+    client.post("/members", json=payload_2)
+
+    response = client.get("/members?search=bob@example.com")
+
+    assert response.status_code == 200
+    assert len(response.get_json()) == 1
+    assert response.get_json()[0]["email"] == "bob@example.com"
     
     
     
