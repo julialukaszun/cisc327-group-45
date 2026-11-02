@@ -69,7 +69,23 @@ def test_create_member_with_empty_email_returns_error(client):
 	assert response.status_code == 400
 	assert response.get_json() == {"error": "Email is required"}
 
-#def test_create_member_with_invalid_email_returns_error(client):
+def test_create_member_with_invalid_email_returns_error(client): # Checks API
+	payload = {
+		"name": "Alice",
+		"email": "not-an-email"
+	}
+
+	response = client.post("/members", json=payload)
+
+	assert response.status_code == 400
+	assert response.get_json() == {"error": "Invalid email"}
+
+def test_members_form_requires_valid_email_format(client): # Checks website form
+	response = client.get("/ui/members")
+
+	assert response.status_code == 200
+	assert b'<input type="email" name="email" required>' in response.data
+
 
 
 '''
