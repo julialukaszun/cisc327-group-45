@@ -5,10 +5,13 @@ from app import create_app
 
 '''
 Checks that 
-1. backup exists independently of the original app instance
-2. creating a member and book automatically creates the backup file
-3. checking out and returning 
-4. test uses a temporary 
+
+1. test uses a temporary json file for its backup
+2. newly created app can still read the saved file (backup exists independently of the original app instance)
+3. updating members and books updates the saved snapshot
+4. creating a member and book automatically creates the backup file
+5. checking out and returning book updates its availability count in the backup
+6. deleting a member removes them from the next snapshot
 '''
 
 def test_backup_is_created_and_updated_by_api(client, tmp_path):
