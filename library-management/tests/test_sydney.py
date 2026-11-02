@@ -2,27 +2,8 @@
 Reponsibilities include:
 
 Adding a member
-	Testing Procedure:
-		Expected input
-		Unexpected input:
-			Empty name
-			Empty email
-			Incorrect email formatting
-			Email characters too long
-			
-		
-	
 Deleting a member
-	Testing procedure:
-		Create a member then delete it
-		Make sure "" is returned
-		Delete non-existing member
-
 Checking out a book
-	Testing procedure:
-		Check if loan is created
-		Check if book available copies decrements
-
 '''
 import pytest
 

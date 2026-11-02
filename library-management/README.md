@@ -51,9 +51,15 @@ app working without a REST client, and calls the same in-memory store.
 | GET | `/members/<id>` | Get one member |
 | PUT | `/members/<id>` | Update a member |
 | DELETE | `/members/<id>` | Delete a member |
+| GET | `/backup` | Get the latest persistent backup of books and members |
+| POST | `/backup` | Create or refresh the persistent backup of books and members |
 | POST | `/loans` | Check out a book (`book_id`, `member_id`) |
 | PUT | `/loans/<id>/return` | Return a loaned book |
 | GET | `/loans?member_id=&book_id=` | Look up loans |
+
+The latest books and members backup is stored as JSON at
+`instance/backup.json`. API requests that create, update, or delete books or
+members automatically refresh it. `POST /backup` also refreshes it on demand.
 
 ## Tests
 

@@ -1,6 +1,7 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from app import store
+from app.models.backup import Backup
 from app.models.book import Book
 
 books_bp = Blueprint("books", __name__, url_prefix="/books")
@@ -28,6 +29,11 @@ def create_book():
         available_copies=data.get("total_copies", 1),
     )
     store.books[book_id] = book
+
+    # Creates snapshot and writes it to backup file
+    Backup.from_store(store.books.values(), store.members.values()).save(
+        current_app.config["BACKUP_FILE"]
+    )
     return jsonify(book.to_dict()), 201
 
 
@@ -50,6 +56,11 @@ def update_book(book_id):
     book.isbn = data.get("isbn", book.isbn)
     book.total_copies = data.get("total_copies", book.total_copies)
     book.available_copies = data.get("available_copies", book.available_copies)
+
+     # Creates snapshot and writes it to backup file
+    Backup.from_store(store.books.values(), store.members.values()).save(
+        current_app.config["BACKUP_FILE"]
+    )
     return jsonify(book.to_dict())
 
 
@@ -58,4 +69,9 @@ def delete_book(book_id):
     book = store.books.pop(book_id, None)
     if book is None:
         return jsonify({"error": "Book not found"}), 404
+
+    # Creates snapshot and writes it to backup file
+    Backup.from_store(store.books.values(), store.members.values()).save(
+        current_app.config["BACKUP_FILE"]
+    )
     return "", 204

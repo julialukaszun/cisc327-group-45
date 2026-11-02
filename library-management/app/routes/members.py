@@ -1,6 +1,7 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 
 from app import store
+from app.models.backup import Backup
 from app.models.member import Member
 
 members_bp = Blueprint("members", __name__, url_prefix="/members")
@@ -17,6 +18,11 @@ def create_member():
     member_id = store.next_id("member")
     member = Member(id=member_id, name=data["name"], email=data["email"])
     store.members[member_id] = member
+
+    # Creates snapshot and writes it to backup file
+    Backup.from_store(store.books.values(), store.members.values()).save(
+        current_app.config["BACKUP_FILE"]
+    )
     return jsonify(member.to_dict()), 201
 
 
@@ -36,6 +42,11 @@ def update_member(member_id):
     data = request.get_json()
     member.name = data.get("name", member.name)
     member.email = data.get("email", member.email)
+
+    # Creates snapshot and writes it to backup file
+    Backup.from_store(store.books.values(), store.members.values()).save(
+        current_app.config["BACKUP_FILE"]
+    )
     return jsonify(member.to_dict())
 
 
@@ -44,4 +55,9 @@ def delete_member(member_id):
     member = store.members.pop(member_id, None)
     if member is None:
         return jsonify({"error": "Member not found"}), 404
+
+    # Creates snapshot and writes it to backup file
+    Backup.from_store(store.books.values(), store.members.values()).save(
+        current_app.config["BACKUP_FILE"]
+    )
     return "", 204
