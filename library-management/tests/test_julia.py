@@ -89,6 +89,19 @@ def test_return_book_invalid_id_type(client):
     response = client.put("/loans/abc/return")
     
     assert response.status_code == 404
+
+# tests for adding a book (other than example test)
+
+def test_create_book_with_default_copies(client):
+    payload = {"title": "Clean Code",
+                            "author": "Robert C. Martin",
+                            "isbn": "978-0132350884"}
+    
+    response = client.post("/books", json=payload)
+    
+    assert response.status_code == 201
+    assert response.json["total_copies"] == 1
+    assert response.json["available_copies"] == 1
     
     
     
