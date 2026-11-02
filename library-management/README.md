@@ -41,7 +41,7 @@ app working without a REST client, and calls the same in-memory store.
 
 | Method | Path | Description |
 |---|---|---|
-| GET | `/books` | List all books |
+| GET | `/books` | List all books (searches by book id, ISBN, title and author)|
 | POST | `/books` | Create a book |
 | GET | `/books/<id>` | Get one book |
 | PUT | `/books/<id>` | Update a book |
