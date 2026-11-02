@@ -6,7 +6,7 @@ from app.models.member import Member
 members_bp = Blueprint("members", __name__, url_prefix="/members")
 
 # added search functionalitiy: added the ability to search by member ID, member name and member email
-members_bp.route("", methods=["GET"])
+@members_bp.route("", methods=["GET"])
 def list_members():
     results = list(store.members.values())
 
