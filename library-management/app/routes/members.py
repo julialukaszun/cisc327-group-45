@@ -5,10 +5,21 @@ from app.models.member import Member
 
 members_bp = Blueprint("members", __name__, url_prefix="/members")
 
-
-@members_bp.route("", methods=["GET"])
+# added search functionalitiy: added the ability to search by member ID, member name and member email
+members_bp.route("", methods=["GET"])
 def list_members():
-    return jsonify([m.to_dict() for m in store.members.values()])
+    results = list(store.members.values())
+
+    search = request.args.get("search", "").strip().lower()
+    if search:
+        results = [
+            m for m in results
+            if (search.isdecimal() and m.id == int(search))
+            or search in m.name.lower()
+            or search in m.email.lower()
+        ]
+
+    return jsonify([m.to_dict() for m in results])
 
 
 @members_bp.route("", methods=["POST"])
