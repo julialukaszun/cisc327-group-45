@@ -1,8 +1,9 @@
 from datetime import date, timedelta
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request # Added current_app so backup file can be located
 
 from app import store
+from app.models.backup import Backup
 from app.models.loan import Loan, LOAN_PERIOD_DAYS
 
 FINE_PER_DAY = 0.25  # dollars charged per day overdue
@@ -31,6 +32,11 @@ def checkout_book():
 
     book.available_copies -= 1
 
+    # Saves snapshot
+    Backup.from_store(store.books.values(), store.members.values()).save(
+        current_app.config["BACKUP_FILE"]
+    )
+
     loan_id = store.next_id("loan")
     loan = Loan(
         id=loan_id,
@@ -53,6 +59,11 @@ def return_book(loan_id):
     loan.return_date = date.today()
     book = store.books.get(loan.book_id)
     book.available_copies += 1
+
+    # Saves snapshot
+    Backup.from_store(store.books.values(), store.members.values()).save(
+        current_app.config["BACKUP_FILE"]
+    )
 
     return jsonify(loan.to_dict())
 
