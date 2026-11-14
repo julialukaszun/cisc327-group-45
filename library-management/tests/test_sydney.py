@@ -6,6 +6,9 @@ Deleting a member
 Checking out a book
 '''
 import pytest
+from datetime import date, timedelta
+
+from app import store
 
 '''
 Function: Creating a member
@@ -292,6 +295,7 @@ def test_create_reservation_when_no_copies_are_available(client):
 		"/members",
 		json={"name": "Alice", "email": "alice3@gmail.com"}
 	).get_json()
+
 	book = client.post(
 		"/books",
 		json={
@@ -327,10 +331,12 @@ def test_list_reservations_returns_all_and_filters_by_book_or_member(client):
 		"/members",
 		json={"name": "Alice", "email": "alice3@gmail.com"}
 	)
+
 	other_member_response = client.post(
 		"/members",
 		json={"name": "Bob", "email": "bob3@gmail.com"}
 	)
+
 	book_response = client.post(
 		"/books",
 		json={
@@ -340,6 +346,7 @@ def test_list_reservations_returns_all_and_filters_by_book_or_member(client):
 			"total_copies": 1
 		}
 	)
+
 	other_book_response = client.post(
 		"/books",
 		json={
@@ -394,9 +401,142 @@ def test_list_reservations_returns_empty_list_for_unmatched_filters(client):
 Function: get_fine
 '''
 
+def test_get_fine_returns_zero_on_due_date(client):
+	book = client.post(
+		"/books",
+		json={
+			"title": "Test Book",
+			"author": "Test Author",
+			"isbn": "1234567890",
+			"total_copies": 1
+		}
+	).get_json()
+
+	loan = client.post(
+		"/loans",
+		json={"book_id": book["id"], "member_id": 1}
+	).get_json()
+
+	store.loans[loan["id"]].due_date = date.today()
+
+	response = client.get(f"/loans/{loan['id']}/fine")
+
+	assert response.status_code == 200
+	assert response.get_json() == {"loan_id": loan["id"], "fine_amount": 0}
+
+
+def test_get_fine_calculates_overdue_amount(client):
+	book = client.post(
+		"/books",
+		json={
+			"title": "Test Book",
+			"author": "Test Author",
+			"isbn": "1234567890",
+			"total_copies": 1
+		}
+	).get_json()
+
+	loan = client.post(
+		"/loans",
+		json={"book_id": book["id"], "member_id": 1}
+	).get_json()
+	store.loans[loan["id"]].due_date = date.today() - timedelta(days=4)
+
+	response = client.get(f"/loans/{loan['id']}/fine")
+
+	assert response.status_code == 200
+	assert response.get_json() == {"loan_id": loan["id"], "fine_amount": 1.0}
+
+
+def test_get_fine_returns_error_for_missing_loan(client):
+	response = client.get("/loans/999/fine")
+
+	assert response.status_code == 404
+	assert response.get_json() == {"error": "Loan not found"}
+
 '''
 Function: renew_loan
 '''
+
+def test_renew_loan_extends_due_date_by_loan_period(client):
+	book = client.post(
+		"/books",
+		json={
+			"title": "Test Book",
+			"author": "Test Author",
+			"isbn": "1234567890",
+			"total_copies": 1
+		}
+	).get_json()
+	loan = client.post(
+		"/loans",
+		json={"book_id": book["id"], "member_id": 1}
+	).get_json()
+	original_due_date = date.fromisoformat(loan["due_date"])
+
+	response = client.put(f"/loans/{loan['id']}/renew")
+
+	assert response.status_code == 200
+	assert response.get_json()["due_date"] == (
+		original_due_date + timedelta(days=14)
+	).isoformat()
+
+
+def test_renew_loan_on_due_date_extends_due_date_by_loan_period(client):
+	book = client.post(
+		"/books",
+		json={
+			"title": "Test Book",
+			"author": "Test Author",
+			"isbn": "1234567890",
+			"total_copies": 1
+		}
+	).get_json()
+
+	loan = client.post(
+		"/loans",
+		json={"book_id": book["id"], "member_id": 1}
+	).get_json()
+
+	store.loans[loan["id"]].due_date = date.today()
+
+	response = client.put(f"/loans/{loan['id']}/renew")
+
+	assert response.status_code == 200
+	assert response.get_json()["due_date"] == (
+		date.today() + timedelta(days=14)
+	).isoformat()
+
+
+def test_renew_loan_returns_error_for_missing_loan(client):
+	response = client.put("/loans/999/renew")
+
+	assert response.status_code == 404
+	assert response.get_json() == {"error": "Loan not found"}
+
+
+def test_renew_loan_returns_error_for_already_returned_loan(client):
+	book = client.post(
+		"/books",
+		json={
+			"title": "Test Book",
+			"author": "Test Author",
+			"isbn": "1234567890",
+			"total_copies": 1
+		}
+	).get_json()
+
+	loan = client.post(
+		"/loans",
+		json={"book_id": book["id"], "member_id": 1}
+	).get_json()
+	
+	client.put(f"/loans/{loan['id']}/return")
+
+	response = client.put(f"/loans/{loan['id']}/renew")
+
+	assert response.status_code == 400
+	assert response.get_json() == {"error": "Loan already returned"}
 
 '''
 Function: list_loans
