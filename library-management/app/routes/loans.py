@@ -5,6 +5,7 @@ from flask import Blueprint, current_app, jsonify, request # Added current_app s
 from app import store
 from app.models.backup import Backup
 from app.models.loan import Loan, LOAN_PERIOD_DAYS
+from notification_service import send_notification
 
 FINE_PER_DAY = 0.25  # dollars charged per day overdue
 
@@ -45,7 +46,24 @@ def checkout_book():
         due_date=Loan.default_due_date(),
     )
     store.loans[loan_id] = loan
-    return jsonify(loan.to_dict()), 201
+
+    # notification service is called to send an email to the member who borrowed the book
+    notification_sent = False
+    member = store.members.get(data["member_id"])
+    if member is not None and member.email:
+        notification_sent = send_notification(
+            member.email,
+            "[City Library] Loan confirmation",
+            f"You borrowed '{book.title}'. It is due on {loan.due_date}.",
+        )
+        if not notification_sent:
+            current_app.logger.warning(
+                "Loan notification failed for member %s", member.id
+            )
+
+    result = loan.to_dict()
+    result["notification_sent"] = notification_sent
+    return jsonify(result), 201
 
 
 @loans_bp.route("/<int:loan_id>/return", methods=["PUT"])
