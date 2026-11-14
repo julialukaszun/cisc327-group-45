@@ -1,0 +1,28 @@
+name: Tests
+
+on: 
+  push: # runs on every push
+  pull_request: 
+    branches: [main] # github triggers by default on opened
+
+jobs:
+  test:
+    runs-on: ubuntu-latest # new linux machine for each run
+    defaults: # every run step execute inside proj folder (doesnt apply to uses: steps)
+      run:
+        working-directory: library-management 
+
+    steps:
+      - name: Check out repository # download repo onto machine
+        uses: actions/checkout@v4 
+
+      - name: Set up Python
+        uses: actions/setup-python@v5 # update python
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies # read requirements
+        run: python -m pip install -r requirements.txt
+
+      - name: Run tests with coverage
+        run: python -m pytest -v --cov=app --cov-report=term-missing --cov-fail-under=90
