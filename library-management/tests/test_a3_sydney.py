@@ -3,6 +3,7 @@ import pytest
 from datetime import date, timedelta
 
 from app import store
+from app.models.reservation import Reservation
 '''
 Notification Failure Cases
 '''
@@ -387,10 +388,113 @@ def test_renew_loan_returns_error_for_already_returned_loan(client):
 Function: list_loans
 '''
 
+def test_list_loans_returns_all_loans_and_applies_filters(client):
+	book1 = client.post(
+		"/books",
+		json={
+			"title": "First Book",
+			"author": "Test Author",
+			"isbn": "1111111111",
+			"total_copies": 1
+		}
+	).get_json()
+	book2 = client.post(
+		"/books",
+		json={
+			"title": "Second Book",
+			"author": "Test Author",
+			"isbn": "2222222222",
+			"total_copies": 1
+		}
+	).get_json()
+	client.post("/loans", json={"book_id": book1["id"], "member_id": 1})
+	client.post("/loans", json={"book_id": book2["id"], "member_id": 2})
+
+	all_loans = client.get("/loans")
+	by_book = client.get(f"/loans?book_id={book1['id']}")
+	by_member = client.get("/loans?member_id=2")
+	by_both = client.get(f"/loans?book_id={book1['id']}&member_id=2")
+
+	assert all_loans.status_code == 200
+	assert len(all_loans.get_json()) == 2
+	assert [loan["book_id"] for loan in by_book.get_json()] == [book1["id"]]
+	assert [loan["member_id"] for loan in by_member.get_json()] == [2]
+	assert by_both.get_json() == []
+
+
+def test_list_loans_returns_empty_list_when_no_loans_exist(client):
+	response = client.get("/loans")
+
+	assert response.status_code == 200
+	assert response.get_json() == []
+
+
+def test_list_loans_ignores_non_integer_filter_values(client):
+	book = client.post(
+		"/books",
+		json={
+			"title": "Test Book",
+			"author": "Test Author",
+			"isbn": "1234567890",
+			"total_copies": 1
+		}
+	).get_json()
+	client.post("/loans", json={"book_id": book["id"], "member_id": 1})
+
+	response = client.get("/loans?book_id=not-an-integer")
+
+	assert response.status_code == 200
+	assert len(response.get_json()) == 1
+
 '''
 Function: Reservation.to_dict
 '''
 
+def test_reservation_to_dict_serializes_fields_and_boundary_date():
+	reservation = Reservation(
+		id=1,
+		book_id=2,
+		member_id=3,
+		reservation_date=date.min,
+		fulfilled=True,
+	)
+
+	assert reservation.to_dict() == {
+		"id": 1,
+		"book_id": 2,
+		"member_id": 3,
+		"reservation_date": date.min.isoformat(),
+		"fulfilled": True,
+	}
+
+
+def test_reservation_to_dict_raises_for_invalid_reservation_date():
+	reservation = Reservation(
+		id=1,
+		book_id=2,
+		member_id=3,
+		reservation_date="not-a-date",
+	)
+
+	with pytest.raises(AttributeError):
+		reservation.to_dict()
+
 '''
 Function: Reservation._init_
 '''
+
+def test_reservation_init_stores_values_and_defaults_boundary_date():
+	before = date.today()
+	reservation = Reservation(id=1, book_id=2, member_id=3)
+	after = date.today()
+
+	assert reservation.id == 1
+	assert reservation.book_id == 2
+	assert reservation.member_id == 3
+	assert before <= reservation.reservation_date <= after
+	assert reservation.fulfilled is False
+
+
+def test_reservation_init_raises_when_required_values_are_missing():
+	with pytest.raises(TypeError):
+		Reservation(id=1, book_id=2)
