@@ -175,3 +175,33 @@ def test_checkout_form_unknown_book_creates_no_loan(client, empty_store):
     assert resp.status_code == 302
     assert len(store.loans) == 0
     assert store.books[1].available_copies == 2
+
+# views.py/return_loan_page
+def test_return_form_sets_return_date_and_restores_copy(client, empty_store):
+    book = _add_book(1, copies=2)
+    book.available_copies = 1
+    _add_member(1)
+    loan = _add_loan(1)
+    resp = client.post("/ui/loans/1/return")
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/ui/loans")
+    assert loan.return_date == date.today()
+    assert store.books[1].available_copies == 2
+
+def test_return_form_already_returned_loan_is_not_counted_twice(client, empty_store):
+    book = _add_book(1, copies=2)
+    book.available_copies = 2
+    loan = _add_loan(1)
+    original = date(2026, 1, 1)
+    loan.return_date = original
+    resp = client.post("/ui/loans/1/return")
+    assert resp.status_code == 302
+    assert loan.return_date == original
+    assert store.books[1].available_copies == 2
+
+def test_return_form_unknown_loan_changes_nothing(client, empty_store):
+    book = _add_book(1, copies=2)
+    book.available_copies = 1
+    resp = client.post("/ui/loans/999/return")
+    assert resp.status_code == 302
+    assert store.books[1].available_copies == 1
