@@ -122,3 +122,19 @@ def test_add_book_form_missing_title_is_rejected(client, empty_store):
     })
     assert resp.status_code == 400
     assert len(store.books) == 0
+
+# views.py/delete_book_page
+def test_delete_member_removes_only_that_member(client, empty_store):
+    _add_member(1, name="Julia")
+    _add_member(2, name="Bob")
+    resp = client.post("/ui/members/1/delete")
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/ui/members")
+    assert 1 not in store.members
+    assert 2 in store.members
+
+def test_delete_nonexistent_member_changes_nothing(client, empty_store):
+    _add_member(1, name="Julia")
+    resp = client.post("/ui/members/999/delete")
+    assert resp.status_code == 302
+    assert list(store.members.keys()) == [1]
