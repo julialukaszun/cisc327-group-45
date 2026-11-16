@@ -6,7 +6,9 @@ Deleting a member
 Checking out a book
 '''
 import pytest
+from datetime import date, timedelta
 
+from app import store
 '''
 Function: Creating a member
 '''
