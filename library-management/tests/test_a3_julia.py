@@ -1,9 +1,11 @@
+from datetime import date
 from unittest.mock import patch
 
 import pytest
 
 from app import store
 from app.models.book import Book
+from app.models.loan import Loan
 from app.models.member import Member
 
 SEND = "app.routes.loans.send_notification"
@@ -53,6 +55,7 @@ def _add_loan(loan_id=1, book_id=1, member_id=1):
     store.loans[loan_id] = loan
     return loan
 
+# tests for notification service (success path)
 def test_checkout_succeeds_when_notification_stub_returns_true(client, book_and_member, monkeypatch): #stub
     book, member = book_and_member
     monkeypatch.setattr(SEND, lambda recipient, subject, message: True)
@@ -138,3 +141,37 @@ def test_delete_nonexistent_member_changes_nothing(client, empty_store):
     resp = client.post("/ui/members/999/delete")
     assert resp.status_code == 302
     assert list(store.members.keys()) == [1]
+    
+# views.py/loans_page
+
+def test_loans_page_shows_return_button_only_for_open_loans(client, empty_store):
+    _add_book(1)
+    _add_member(1)
+    _add_loan(1)
+    returned = _add_loan(2)
+    returned.return_date = date.today()
+    resp = client.get("/ui/loans")
+    assert resp.status_code == 200
+    assert b"/ui/loans/1/return" in resp.data
+    assert b"/ui/loans/2/return" not in resp.data
+
+def test_checkout_form_creates_loan_and_decrements_copies(client, empty_store):
+    _add_book(1, copies=2)
+    _add_member(1)
+    resp = client.post("/ui/loans", data={"book_id": "1", "member_id": "1"})
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/ui/loans")
+    assert len(store.loans) == 1
+    loan = list(store.loans.values())[0]
+    assert loan.book_id == 1
+    assert loan.member_id == 1
+    assert loan.return_date is None
+    assert store.books[1].available_copies == 1
+
+def test_checkout_form_unknown_book_creates_no_loan(client, empty_store):
+    _add_book(1, copies=2)
+    _add_member(1)
+    resp = client.post("/ui/loans", data={"book_id": "999", "member_id": "1"})
+    assert resp.status_code == 302
+    assert len(store.loans) == 0
+    assert store.books[1].available_copies == 2
