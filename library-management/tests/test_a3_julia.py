@@ -94,3 +94,31 @@ def test_home_page_renders_html(client, empty_store):
     assert resp.status_code == 200
     assert "text/html" in resp.content_type
     assert len(resp.data) > 0
+
+# views.py/books_page
+def test_books_page_lists_existing_books(client, empty_store):
+    _add_book(1, title="Clean Code")
+    _add_book(2, title="Bad Code")
+    resp = client.get("/ui/books")
+    assert resp.status_code == 200
+    assert b"Clean Code" in resp.data
+    assert b"Bad Code" in resp.data
+
+def test_add_book_form_creates_book_with_all_copies_available(client, empty_store):
+    resp = client.post("/ui/books", data={
+        "title": "Clean Code", "author": "Robert C. Martin", "isbn": "978-0132350884", "total_copies": "3",
+    })
+    assert resp.status_code == 302
+    assert resp.headers["Location"].endswith("/ui/books")
+    assert len(store.books) == 1
+    book = list(store.books.values())[0]
+    assert book.title == "Clean Code"
+    assert book.total_copies == 3
+    assert book.available_copies == 3
+
+def test_add_book_form_missing_title_is_rejected(client, empty_store):
+    resp = client.post("/ui/books", data={
+        "author": "Robert C. Martin", "isbn": "978-0132350884", "total_copies": "3",
+    })
+    assert resp.status_code == 400
+    assert len(store.books) == 0
