@@ -87,3 +87,10 @@ def test_checkout_sends_loan_confirmation_with_expected_arguments(client, book_a
         "[City Library] Loan confirmation",
         f"You borrowed '{book.title}'. It is due on {loan.due_date}.",
     )
+    
+# views.py/home
+def test_home_page_renders_html(client, empty_store):
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert "text/html" in resp.content_type
+    assert len(resp.data) > 0
